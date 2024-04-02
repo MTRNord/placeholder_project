@@ -4,14 +4,10 @@ use bevy::prelude::*;
 use bevy::render::RenderPlugin;
 use bevy::utils::Duration;
 
-use lightyear::{
-    client::components::Confirmed, prelude::*, shared::events::components::ComponentInsertEvent,
-};
+use lightyear::{client::components::Confirmed, prelude::*};
 use serde::{Deserialize, Serialize};
 
-use crate::player::{AnimationIndices, AnimationTimer};
-
-use self::protocol::{Inputs, PlayerId, PlayerPosition};
+use self::protocol::{Inputs, PlayerPosition};
 
 pub mod client;
 pub mod protocol;
@@ -34,7 +30,7 @@ pub struct SharedPlugin;
 impl Plugin for SharedPlugin {
     fn build(&self, app: &mut App) {
         if app.is_plugin_added::<RenderPlugin>() {
-            app.add_systems(PostUpdate, (draw_elements, spawn_tiles));
+            app.add_systems(PostUpdate, draw_elements);
             // app.add_plugins(LogDiagnosticsPlugin {
             //     filter: Some(vec![
             //         IoDiagnosticsPlugin::BYTES_IN,
@@ -61,42 +57,6 @@ pub(crate) fn shared_movement_behaviour(mut position: Mut<PlayerPosition>, input
         }
         if direction.right {
             position.x += MOVE_SPEED;
-        }
-    }
-}
-
-pub fn spawn_tiles(
-    mut commands: Commands,
-    asset_server: Res<AssetServer>,
-    mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
-    mut new_players: EventReader<ComponentInsertEvent<PlayerId>>,
-) {
-    let texture = asset_server.load("tilesets/user.png");
-    let layout = TextureAtlasLayout::from_grid(Vec2::new(16.0, 16.0), 8, 8, None, None);
-    let texture_atlas_layout = texture_atlas_layouts.add(layout);
-
-    for player_event in new_players.read() {
-        let entity = player_event.entity();
-        info!("Spawning tile");
-        // Use only the subset of sprites in the sheet that make up the run animation
-        let animation_indices = AnimationIndices { first: 0, last: 3 };
-        let atlas = TextureAtlas {
-            layout: texture_atlas_layout.clone(),
-            index: animation_indices.first,
-        };
-        if let Some(mut e) = commands.get_entity(entity) {
-            e.with_children(|parent| {
-                parent.spawn((
-                    AnimationTimer(Timer::from_seconds(0.3, TimerMode::Repeating)),
-                    animation_indices,
-                    SpriteSheetBundle {
-                        transform: Transform::from_xyz(0., 0., 17.).with_scale(Vec3::splat(2.0)),
-                        texture: texture.clone(),
-                        atlas,
-                        ..default()
-                    },
-                ));
-            });
         }
     }
 }

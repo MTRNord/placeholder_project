@@ -8,7 +8,7 @@ use bevy_ecs_ldtk::LdtkWorldBundle;
 use lightyear::prelude::client::*;
 use lightyear::prelude::*;
 
-use crate::player::PlayerBundle;
+use crate::player::{AnimationIndices, AnimationTimer, PlayerBundle};
 
 use super::protocol::{
     protocol, ClientMut, Components, Inputs, MatrixRPGGameProto, PlayerId, PlayerPosition,
@@ -152,7 +152,7 @@ pub(crate) fn buffer_input(mut client: ClientMut, keypress: Res<ButtonInput<KeyC
 fn player_movement(
     mut position_query: Query<
         (&mut Transform, &mut PlayerPosition),
-        (With<Predicted>, Without<Camera>),
+        (With<Predicted>, With<PlayerId>, Without<Camera>),
     >,
     mut cameras: Query<&mut Transform, With<Camera>>,
     mut input_reader: EventReader<InputEvent<Inputs>>,
@@ -182,21 +182,40 @@ fn spawn_player(
     mut commands: Commands,
     players: Query<&PlayerId, With<PlayerPosition>>,
     metadata: Res<GlobalMetadata>,
+    asset_server: Res<AssetServer>,
+    mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
 ) {
     // return early if we still don't have access to the client id
     let Some(client_id) = metadata.client_id else {
         return;
     };
 
-    // Only spawn other players
     for player_id in players.iter() {
         if player_id.0 == client_id {
             return;
         }
     }
     info!("got spawn input");
+
+    let texture = asset_server.load("tilesets/user.png");
+    let layout = TextureAtlasLayout::from_grid(Vec2::new(16.0, 16.0), 8, 8, None, None);
+    let texture_atlas_layout = texture_atlas_layouts.add(layout);
+    // Use only the subset of sprites in the sheet that make up the run animation
+    let animation_indices = AnimationIndices { first: 0, last: 3 };
+    let atlas = TextureAtlas {
+        layout: texture_atlas_layout.clone(),
+        index: animation_indices.first,
+    };
     commands.spawn((
         PlayerBundle::new(client_id, Vec2::ZERO),
+        AnimationTimer(Timer::from_seconds(0.3, TimerMode::Repeating)),
+        animation_indices,
+        SpriteSheetBundle {
+            transform: Transform::from_xyz(0., 0., 17.).with_scale(Vec3::splat(2.0)),
+            texture: texture.clone(),
+            atlas,
+            ..default()
+        },
         // IMPORTANT: this lets the server know that the entity is pre-predicted
         // when the server replicates this entity; we will get a Confirmed entity which will use this entity
         // as the Predicted version
