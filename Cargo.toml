@@ -1,0 +1,38 @@
+[package]
+name = "matrix-rpg-rs"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+async-compat = "0.2.3"
+bevy = { version = "0.13", features = ["wayland"] }
+bevy_ecs_ldtk = { git = "https://github.com/theshortcut/bevy_ecs_ldtk", rev = "ef84e85e958c988e35bcd5e700d33f8cdb8015d1", version = "0.9.0" }
+bevy_rapier2d = "0.25.0"
+cfg-if = "1.0.0"
+clap = { version = "4.5.4", features = ["derive"] }
+crossbeam-channel = "0.5.12"
+derive_more = "0.99.17"
+iyes_perf_ui = "0.2.3"
+lightyear = { version = "0.12.0", features = [ "websocket", "render"] }
+livekit = "0.3.2"
+matrix-sdk = "0.7.1"
+rand = "0.8.5"
+serde = "1.0.197"
+
+[patch.crates-io]
+bevy_ecs_tilemap = { git = "https://github.com/StarArawn/bevy_ecs_tilemap" }
+
+# Enable a small amount of optimization in debug mode
+[profile.dev]
+opt-level = 1
+
+# Enable high optimizations for dependencies (incl. Bevy), but not for our code:
+[profile.dev.package."*"]
+opt-level = 3
+
+[profile.release]
+opt-level = 'z'
+lto = true
+codegen-units = 1
